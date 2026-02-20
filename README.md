@@ -18,7 +18,6 @@ A robust, event-driven backend service for processing orders, built with FastAPI
 - **Database**: PostgreSQL / SQLAlchemy (Async) / Alembic
 - **Message Broker**: RabbitMQ / aio-pika
 - **Cache**: Redis / redis-py
-- **Testing**: Pytest, Docker Compose
 
 ## Setup Instructions
 
@@ -71,16 +70,6 @@ Response (200 OK):
   "items": [...],
   "total_amount": 100.0
 }
-```
-
-## Testing
-
-Integration tests are provided to verify the full flow (API -> DB -> MQ -> Consumer).
-
-To run tests:
-
-```bash
-docker-compose exec app pytest
 ```
 
 ## Environment Variables

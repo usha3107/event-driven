@@ -35,7 +35,7 @@ class OrderEventProducer:
 
         event = {
             "event_type": "OrderCreated",
-            "event_id": str(order_data.get("order_id")), # Using order_id as unique event id for simplicity or gen new one
+            "event_id": str(order_data.get("order_id")),
             "timestamp": datetime.utcnow().isoformat(),
             "payload": order_data
         }

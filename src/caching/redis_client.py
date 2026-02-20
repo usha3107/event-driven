@@ -48,7 +48,7 @@ class RedisClient:
             
         key = f"rate_limit:{ip_address}"
         try:
-            # Simple fixed window counter
+
             current = await self.redis.incr(key)
             if current == 1:
                 await self.redis.expire(key, window)
@@ -56,7 +56,7 @@ class RedisClient:
             return current <= limit
         except Exception as e:
             logger.error(f"Redis rate limit error: {e}")
-            return True # Fail open to avoid blocking users on cache failure
+
 
 redis_client = RedisClient()
 

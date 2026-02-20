@@ -16,12 +16,10 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting up...")
     
-    # Create DB tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        
-    await producer.connect()
-    await consumer.connect() # Starts background consuming task
+        logger.info("Database tables created/verified.")
+    await consumer.connect()
     await redis_client.connect()
     
     yield

@@ -7,7 +7,7 @@ from decimal import Decimal
 class OrderItemBase(BaseModel):
     product_id: UUID
     quantity: int = Field(gt=0)
-    # Price is not in request, should be fetched from Product Service (mocked here)
+    
 
 class OrderItemCreate(OrderItemBase):
     pass
