@@ -46,21 +46,6 @@ class OrderService:
             await self.db.commit()
             await self.db.refresh(new_order)
             
-            # Prepare event data
-            order_data = {
-                "order_id": str(new_order.order_id),
-                "customer_id": str(new_order.customer_id),
-                "items": [
-                    {"product_id": str(i.product_id), "quantity": i.quantity, "price": float(i.price)} 
-                    for i in new_order.items
-                ],
-                "total_amount": float(new_order.total_amount)
-            }
-            
-            # Publish event
-            await self.producer.publish_order_created(order_data)
-            logger.info(f"Order {new_order.order_id} created and event published.")
-            
             return new_order
         except Exception as e:
             await self.db.rollback()
@@ -90,9 +75,10 @@ class OrderService:
         from src.core.models import OrderResponse
         import json
         
+        from src.core.config import settings
         response_data = OrderResponse.model_validate(order)
         order_dict = json.loads(response_data.model_dump_json())
-        await self.redis.set_cached_order(str(order.order_id), order_dict, ttl=60)
+        await self.redis.set_cached_order(str(order.order_id), order_dict, ttl=settings.CACHE_TTL)
         
         return order
 
@@ -108,6 +94,8 @@ class OrderService:
                     order.status = new_status
                     await self.db.commit()
                     logger.info(f"Updated order {order_id} status to {new_status}")
+                    # Invalidate cache on update
+                    await self.redis.delete_cached_order(order_id)
             else:
                 logger.warning(f"Order {order_id} not found for status update")
         except Exception as e:

@@ -28,13 +28,24 @@ class RedisClient:
             logger.error(f"Redis get error: {e}")
             return None
 
-    async def set_cached_order(self, order_id: str, data: dict, ttl: int = 60):
+    async def set_cached_order(self, order_id: str, data: dict, ttl: Optional[int] = None):
         if not self.redis:
             await self.connect()
+        if ttl is None:
+            ttl = settings.CACHE_TTL
         try:
             await self.redis.set(f"order:{order_id}", json.dumps(data, default=str), ex=ttl)
         except Exception as e:
             logger.error(f"Redis set error: {e}")
+
+    async def delete_cached_order(self, order_id: str):
+        if not self.redis:
+            await self.connect()
+        try:
+            await self.redis.delete(f"order:{order_id}")
+            logger.info(f"Deleted cache for order {order_id}")
+        except Exception as e:
+            logger.error(f"Redis delete error: {e}")
 
     async def check_rate_limit(self, ip_address: str, limit: int, window: int) -> bool:
         """

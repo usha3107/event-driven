@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
@@ -8,8 +8,13 @@ from src.messaging.producer import get_producer, OrderEventProducer
 from src.caching.redis_client import get_redis, RedisClient
 from src.core.config import settings
 from src.core.services import OrderService
+from src.core.security import get_current_user
 
-router = APIRouter(prefix="/api/orders", tags=["orders"])
+router = APIRouter(
+    prefix="/api/orders", 
+    tags=["orders"],
+    dependencies=[Depends(get_current_user)]
+)
 
 async def get_order_service(
     db: AsyncSession = Depends(get_db),
@@ -22,8 +27,10 @@ async def get_order_service(
 async def create_order(
     request: Request,
     order_in: OrderCreate,
+    background_tasks: BackgroundTasks,
     redis: RedisClient = Depends(get_redis),
-    service: OrderService = Depends(get_order_service)
+    service: OrderService = Depends(get_order_service),
+    producer: OrderEventProducer = Depends(get_producer)
 ):
     client_ip = request.client.host
     allowed = await redis.check_rate_limit(
@@ -37,7 +44,21 @@ async def create_order(
             detail="Too many requests"
         )
 
-    return await service.create_order(order_in)
+    order = await service.create_order(order_in)
+    
+    # Offload event publishing to background task
+    order_data = {
+        "order_id": str(order.order_id),
+        "customer_id": str(order.customer_id),
+        "items": [
+            {"product_id": str(i.product_id), "quantity": i.quantity, "price": float(i.price)} 
+            for i in order.items
+        ],
+        "total_amount": float(order.total_amount)
+    }
+    background_tasks.add_task(producer.publish_order_created, order_data)
+    
+    return order
 
 @router.get("/{order_id}", response_model=OrderResponse)
 async def get_order(
