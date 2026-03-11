@@ -140,7 +140,7 @@ erDiagram
 
 - **Rate Limiting Strategy**: Implemented using a Redis-based fixed window counter (5 requests/minute/IP) to prevent abuse while keeping implementation lightweight.
 - **Caching Model**:
-  - `GET /orders/{id}` responses are cached in Redis with a 60-second TTL.
-  - **Consistency**: This system favors read performance over strict real-time consistency. Updates from the worker (e.g., status changes) do not immediately invalidate the cache, meaning clients might see "PENDING" for up to 60 seconds after a status change. This is a deliberate trade-off for this implementation.
+  - `GET /orders/{id}` responses are cached in Redis with a configurable TTL (default 60 seconds).
+  - **Consistency**: The system ensures data consistency by invalidating the Redis cache immediately when an order status is updated by the consumer worker. This ensures clients always see the latest order status after a payment event is processed.
 - **Transactional Integrity**: Events are published to RabbitMQ only after the order is successfully committed to PostgreSQL, ensuring we don't publish events for failed orders.
 - **UUID Handling**: UUIDs are used for all IDs to ensure uniqueness across distributed systems and avoid enumeration attacks.
